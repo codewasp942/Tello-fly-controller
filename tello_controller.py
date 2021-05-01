@@ -32,7 +32,7 @@ class tello_controller :
 
 		return data,server
 
-def search_addr(self):
+def search_addr():
 	# search addresses
 	subnets = []
 	addr = []

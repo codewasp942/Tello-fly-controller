@@ -2,7 +2,7 @@
 ## Control your Tello EDU drones swarm
 ---
 
-You can edit `ctrl.py` or `import tello_controller` to control your drones
+You can edit `ctrl.py` to control your drones
 
 ---
 > codewasp942 Tang Mingze

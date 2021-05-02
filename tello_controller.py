@@ -1,7 +1,10 @@
-# -*- coding: utf-8 -*-
+#-*- coding : utf-8-*-
+# coding:unicode_escape
 import socket
-import netifaces as nifs
+
 import netaddr
+import netifaces as nifs
+
 
 class tello_controller :
 	def __init__(self,_tello_ip = '192.168.10.1'):
@@ -11,7 +14,7 @@ class tello_controller :
 
 		# local IP address
 		self.local_ip = ''
-		self.local_addr = (self.local_ip,8890)
+		self.local_addr = (self.local_ip,8889)
 		
 		# create and bind socket
 		self.sock_sender = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -24,6 +27,7 @@ class tello_controller :
 	def startup_sdk(self):
 		# send 'command' to tello and startup tello sdk
 		self.send_command('command')
+
 	def recv(self):
 		# recv messages from tello
 		data,server = self.sock_sender.recvfrom(1518)
@@ -31,6 +35,20 @@ class tello_controller :
 			data,server = self.sock_sender.recvfrom(1518)
 
 		return data,server
+
+	def close(self):
+		# close socket
+		self.sock_sender.close()
+
+	def get_sn(self):
+		self.send_command("sn?")
+		sn=str(self.recv()[0])
+		while len(sn)!=17:
+			print(sn)
+			print(len(sn))
+			sn=str(self.recv()[0])
+		return sn
+
 
 def search_addr():
 	# search addresses
@@ -58,3 +76,13 @@ def search_addr():
 		addr.append(address)
 	
 	return subnets,addr
+
+def get_host_ip():
+	# try ip
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(('8.8.8.8', 80))
+        ip = s.getsockname()[0]
+    finally:
+        s.close()
+        return ip

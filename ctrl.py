@@ -13,7 +13,6 @@ import thread_stop
 tello = TELLO.tello_controller()
 tello.startup_sdk()
 tello.send_command('takeoff')
-print (tello.recv())
 tello.send_command('land')
 """
 """
@@ -50,7 +49,7 @@ while True:
 	# switch to station mode
 	print('sending AP command')
 	tello.send_command('ap '+config.get_config('ssid')+' '+config.get_config('password'))
-	tello.recv()
+	tello.sync()
 
 	print('switched to station mode')
 	n+=1
@@ -64,11 +63,22 @@ if n==0:
 		exit()
 
 ips = []
-print('input number of ')
-sbn = input()
+my_ip = TELLO.get_host_ip()
+print('how many devices connected to your hotspot ? (please make sure only drones and your computer connect it)')
+sbn = int(input())
 
-for i in range(n):
-	print('input ip address of tello #%d' % i)
-	ips.append(input())
+for i in range(sbn):
+	print('input ip address of device #%d' % i)
+	ipt_ip = input()
+	if my_ip != ipt_ip:
+		ips.append(ipt_ip)
 
-print(TELLO.get_host_ip())
+print(ips)
+tello_links = []
+for i in ips:
+	print('try to call ip '+i)
+	new_controller=TELLO.tello_controller([i])
+	new_controller.startup_sdk()
+	new_controller.send_command('battery?')
+	new_controller.sync()
+	print(new_controller.get_msg()[-1])

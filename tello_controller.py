@@ -86,7 +86,7 @@ class tello_controller :
 	def close(self):
 		# close socket
 		self.sock_closed = True
-		self.sock_sender.sendto('end'.encode('utf-8'),('',8889))
+		self.sock_sender.sendto('end'.encode('utf-8'),(get_host_ip(),8889))
 		self.sock_sender.close()
 
 	def sync_all(self):

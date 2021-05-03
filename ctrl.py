@@ -74,11 +74,6 @@ for i in range(sbn):
 		ips.append(ipt_ip)
 
 print(ips)
-tello_links = []
-for i in ips:
-	print('try to call ip '+i)
-	new_controller=TELLO.tello_controller([i])
-	new_controller.startup_sdk()
-	new_controller.send_command('battery?')
-	new_controller.sync()
-	print(new_controller.get_msg()[-1])
+ctrl=TELLO.tello_controller(ips)
+ctrl.startup_sdk()
+print(ctrl.get_sn())

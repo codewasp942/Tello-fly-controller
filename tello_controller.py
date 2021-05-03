@@ -11,17 +11,18 @@ import thread_stop
 
 def get_host_ip():
 	# try ip
-    try:
-        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        s.connect(('8.8.8.8', 80))
-        ip = s.getsockname()[0]
-    finally:
-        s.close()
-        return ip
+	try:
+		s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+		s.connect(('8.8.8.8', 80))
+		ip = s.getsockname()[0]
+	finally:
+		s.close()
+		return ip
 
 class tello_controller :
 
 	def __init__(self,_tello_ip = ['192.168.10.1']):
+		self.tello_num = len(_tello_ip)
 		# tello IP address 
 		self.tello_ip = _tello_ip
 		self.tello_addr = []
@@ -65,6 +66,7 @@ class tello_controller :
 		self.thread_recv.start()
 
 	def add_tello(self,_tello_ip):
+		self.tello_num+=1
 		# add a drone
 		self.tello_ip.extend(_tello_ip)
 		self.tello_addr.append((_tello_ip,8889))
@@ -78,10 +80,15 @@ class tello_controller :
 		self.sock_sender.sendto(command.encode('utf-8'),self.tello_addr[index])
 		self.send_count[index]+=1
 	
-	def startup_sdk(self,index=0):
+	def startup_sdk(self,index=-1):
 		# send 'command' to tello and startup tello sdk
-		self.send_command('command',index)
-		self.sync()
+		if index != -1:
+			self.send_command('command',index)
+			self.sync(index)
+		else:
+			for i in range(self.tello_num):
+				self.send_command('command',i)
+			self.sync_all()
 
 	def close(self):
 		# close socket

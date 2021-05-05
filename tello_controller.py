@@ -46,6 +46,8 @@ class tello_controller :
 
 		self.sock_closed = False
 
+		self.start_time = time.perf_counter()
+
 		def recv_tello():
 			# an inner funtion
 			# recv messages from tello and add it into a list
@@ -96,8 +98,12 @@ class tello_controller :
 		self.sock_sender.sendto('end'.encode('utf-8'),(get_host_ip(),8889))
 		self.sock_sender.close()
 
-	def sync_all(self):
+	def sync_all(self,max_time=0):
+		end_time = self.get_time()+max_time
 		while True:
+			if (max_time > 0) and (self.get_time() > end_time):
+				print('%ds time out !' % max_time)
+				break
 			all_recv = True
 			for i in range(len(self.tello_ip)):
 				if self.send_count[i] != self.recv_count[i]:
@@ -105,8 +111,12 @@ class tello_controller :
 			if all_recv:
 				break
 
-	def sync(self,index=0):
+	def sync(self,index=0,max_time=0):
+		end_time = self.get_time()+max_time
 		while True:
+			if (max_time > 0) and (self.get_time() > end_time):
+				print('#%d %ds time out !' % (index,max_time))
+				break
 			if self.send_count[index] == self.recv_count[index]:
 				break
 
@@ -123,6 +133,13 @@ class tello_controller :
 
 	def get_msg(self,index=0):
 		return self.msg[index]
+
+	def reset_tick(self):
+		self.start_time = time.perf_counter()
+
+	def get_time(self):
+		return time.perf_counter() - self.start_time
+
 
 def search_addr():
 	# search addresses

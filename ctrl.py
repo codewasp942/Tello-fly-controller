@@ -5,6 +5,8 @@ import socket
 import threading
 import time
 
+import cv2 as cv
+
 import drone_config
 import tello_controller as TELLO
 import thread_stop
@@ -61,29 +63,56 @@ def send_all(cmd):
 	for i in range(ctrl.tello_num):
 		ctrl.send_command(cmd,index_map(i))
 
-for i in range(ctrl.tello_num):
-	ctrl.send_command('battery?',i)
-	ctrl.sync(i)
-	print(ctrl.get_msg(i)[-1])
+def send_to(cmd,idx):
+	ctrl.send_command(cmd,index_map(idx))
+
+def show_video():
+	# show video from drone
+	print('start recv from '+ips[0])
+	capture = cv.VideoCapture('udp://'+ips[0]+':11111')
+	while stream_on:
+		ret,now_frame = capture.read()
+		try:
+			cv.imshow('capture', now_frame)
+		finally:
+			pass
+		if cv.waitKey(10)==ord('q'):
+			break
+	capture.release()
+	cv.destroyAllWindows()
 
 print('enter 3 times to take off')
 input()
 input()
 input()
 
-send_all('takeoff')
+stream_on = False
+thread_video = threading.Thread(target=show_video)
+
+send_all('streamon')
+stream_on = True
+#thread_video.start()
 ctrl.sync_all()
 
-send_all('up 60')
+ctrl.reset_tick()
+
+send_to('takeoff', 0)
+ctrl.sync(0)
+
+send_all('mon')
 ctrl.sync_all()
 
-send_all('down 60')
+send_to('go 0 100 130 80 m-1', 0)
+ctrl.sync(0)
+
+send_to('land', 0)
+ctrl.sync(0)
+
+send_all('moff')
 ctrl.sync_all()
 
-send_all('cw 360')
-ctrl.sync_all()
-
-send_all('land')
+send_all('streamoff')
+stream_on = False
 ctrl.sync_all()
 
 print('OK')

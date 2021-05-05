@@ -30,19 +30,26 @@ class tello_controller :
 		self.recv_count = []
 		self.recv_log = []
 		self.msg = []
+		self.tello_states = []
+
 		for i in _tello_ip:
 			self.tello_addr.append((i,8889))
 			self.send_count.append(0)
 			self.recv_count.append(0)
 			self.msg.append([])
+			self.tello_states.append({'ip':i})
 
 		# local IP address
 		self.local_ip = ''
-		self.local_addr = (self.local_ip,8889)
+		self.local_addr = (self.local_ip,8889)	
+		self.state_recv_addr = (self.local_ip,8890)
 		
 		# create and bind socket
 		self.sock_sender = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 		self.sock_sender.bind(self.local_addr)
+
+		self.sock_state = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+		self.sock_state.bind(self.state_recv_addr)
 
 		self.sock_closed = False
 
@@ -63,9 +70,37 @@ class tello_controller :
 						self.recv_log.append((data,i))
 						self.msg[i].append(data)
 						break
+		
+		def recv_state():
+			# recv tello state
+			print('state recv thread started')
+			while not self.sock_closed:
+
+				data,server = self.sock_state.recvfrom(1518)
+
+				for i in range(len(self.tello_ip)):
+					if server[0] == self.tello_ip[i]:
+
+						self.tello_states[i].clear()
+						self.tello_states[i]['chk']='1'
+
+						info = str(data,'utf-8').split(';')
+
+						for nw_info in info:
+
+							k = nw_info.split(':')
+							if len(k)!=2:
+								continue
+
+							key,value=k
+							self.tello_states[i][key]=value
+						break
 
 		self.thread_recv = threading.Thread(target=recv_tello)
 		self.thread_recv.start()
+
+		self.thread_state = threading.Thread(target=recv_state)
+		self.thread_state.start()
 
 	def add_tello(self,_tello_ip):
 		self.tello_num+=1
@@ -78,7 +113,7 @@ class tello_controller :
 
 	def send_command(self,command,index=0):
 		# send command to tello
-		print('send command '+command)
+		print('send command '+command+' to '+str(self.tello_addr[index]))
 		self.sock_sender.sendto(command.encode('utf-8'),self.tello_addr[index])
 		self.send_count[index]+=1
 	
@@ -95,13 +130,17 @@ class tello_controller :
 	def close(self):
 		# close socket
 		self.sock_closed = True
-		self.sock_sender.sendto('end'.encode('utf-8'),(get_host_ip(),8889))
-		self.sock_sender.close()
 
-	def sync_all(self,max_time=0):
-		end_time = self.get_time()+max_time
+		self.sock_sender.sendto('end'.encode('utf-8'),(get_host_ip(),8889))
+		self.sock_sender.sendto('end'.encode('utf-8'),(get_host_ip(),8890))
+
+		self.sock_sender.close()
+		self.sock_state.close()
+
+	def sync_all(self,end_time=0):
+		stt_time = self.get_time()
 		while True:
-			if (max_time > 0) and (self.get_time() > end_time):
+			if (end_time!=0) and (self.get_time() > end_time):
 				print('%ds time out !' % max_time)
 				break
 			all_recv = True
@@ -111,10 +150,10 @@ class tello_controller :
 			if all_recv:
 				break
 
-	def sync(self,index=0,max_time=0):
-		end_time = self.get_time()+max_time
+	def sync(self,index=0,end_time=0):
+		stt_time = self.get_time()
 		while True:
-			if (max_time > 0) and (self.get_time() > end_time):
+			if (end_time!=0) and (self.get_time() > end_time):
 				print('#%d %ds time out !' % (index,max_time))
 				break
 			if self.send_count[index] == self.recv_count[index]:

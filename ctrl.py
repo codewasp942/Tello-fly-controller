@@ -25,7 +25,10 @@ else:
 """
 
 sn_file = open('sn.txt','r')
-sn_list = sn_file.readlines()
+sn_lines = sn_file.readlines()
+sn_list = []
+for i in sn_lines:
+	sn_list.append(i.strip())
 
 n=len(sn_list)
 
@@ -64,22 +67,31 @@ def send_all(cmd):
 		ctrl.send_command(cmd,index_map(i))
 
 def send_to(cmd,idx):
+	print(str(index_map(idx))+' gg')
 	ctrl.send_command(cmd,index_map(idx))
 
 def show_video():
 	# show video from drone
-	print('start recv from '+ips[0])
-	capture = cv.VideoCapture('udp://'+ips[0]+':11111')
+	print('start recv video stream')
+
+	captures = []
+	for i in ips:
+		captures.append(cv.VideoCapture('udp://'+ips[0]+':11111'))
+
 	while stream_on:
-		ret,now_frame = capture.read()
-		try:
-			cv.imshow('capture', now_frame)
-		finally:
-			pass
+		for now_capture in captures:
+			ret,now_frame = now_capture.read()
+			try:
+				cv.imshow('capture', now_frame)
+			finally:
+				pass
 		if cv.waitKey(10)==ord('q'):
 			break
 	capture.release()
 	cv.destroyAllWindows()
+
+send_all('battery?')
+ctrl.sync_all()
 
 print('enter 3 times to take off')
 input()
@@ -96,20 +108,21 @@ ctrl.sync_all()
 
 ctrl.reset_tick()
 
-send_to('takeoff', 0)
-ctrl.sync(0)
-
-send_all('mon')
+send_all('takeoff')
 ctrl.sync_all()
 
-send_to('go 0 100 130 80 m-1', 0)
-ctrl.sync(0)
+# main
+
+send_to('forward 40', 0)
+send_to('back 40', 1)
+ctrl.sync_all()
+
+# main
 
 send_to('land', 0)
 ctrl.sync(0)
-
-send_all('moff')
-ctrl.sync_all()
+send_to('land', 1)
+ctrl.sync(1)
 
 send_all('streamoff')
 stream_on = False

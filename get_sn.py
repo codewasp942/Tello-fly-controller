@@ -8,9 +8,9 @@ input()
 
 n = 0
 sn_file = open('sn.txt','w')
-tello = TELLO.tello_controller()
 
 while True:
+	tello = TELLO.tello_controller()
 	print('please connect your tello #%d , Enter to continue and q to end' % n)
 	if input()=='q':
 		break
@@ -32,4 +32,6 @@ while True:
 	print('switched to station mode')
 	n+=1
 
-tello.close()
+	tello.close()
+
+sn_file.close()

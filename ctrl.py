@@ -4,129 +4,59 @@ import os
 import socket
 import threading
 import time
+import random
+import math
 
 import cv2 as cv
 
-import drone_config
-import tello_controller as TELLO
-import thread_stop
+import tello_swarm as SWARM
+import tello_map_setup
 
-"""
-tello = TELLO.tello_controller()
-tello.startup_sdk()
-tello.send_command('takeoff')
-tello.send_command('land')
-"""
-"""
-if(os.path.isfile('settings.txt')):
+def g(idx):
+	return tello_map_setup.get_index(idx)
 
-else:
-	pass
-"""
+swarm = SWARM.swarm(tello_map_setup.ips)
 
-sn_file = open('sn.txt','r')
-sn_lines = sn_file.readlines()
-sn_list = []
-for i in sn_lines:
-	sn_list.append(i.strip())
+# take off
+swarm.add_schedule(0,'takeoff',swarm.uset)
+swarm.add_schedule(0,'up 100',swarm.uset)
 
-n=len(sn_list)
+flip_time_1 = [11.9,14.1,16.3,18.5,20.7]
+for i in range(5):
+	swarm.add_schedule(flip_time_1[i],'flip b',g(i))
+	swarm.add_schedule(flip_time_1[i]+3,'down 70',g(i))
 
-if n==0:
-	print('No drones , do you want to continue ? [y/n]')
-	ch = input()
-	if ch!='y' and ch!='Y':
-		exit()
+def shake(ctrl):
+	directions = []
+	rotates = []
+	last_time = []
+	for i in range(5):
+		directions.append(ctrl.get_state('yaw',i))
+		rotates.append(0)
+		is_ok.append(False)
+		last_time.append(ctrl.get_time())
+		ctrl.send_command(('rc 15 0 0 '+str(100*(random.randint(0,1)*2-1))) , i)
+	while True:
+		all_ok = False
+		for i in range(5):
+			if abs(ctrl.get_state('yaw',i)-directions[i])<=2 and ctrl.get_time()-last_time[i]>=0.5:
+				rotates[i]+=1
+				last_time[i]=ctrl.get_time()
+			if rotates[i]>=1:
+				ctrl.send_command(('rc 0 0 10 '+str(100*(random.randint(0,1)*2-1))) , i)
+			if rotates[i]>=2:
+				ctrl.send_command(('rc 0 0 -10 '+str(100*(random.randint(0,1)*2-1))) , i)
+			if rotates[i]>=3:
+				ctrl.send_command('stop',i)
+			if rotates[i]<3:
+				all_ok=False
+			if all_ok:
+				break
+	ctrl.sync_all()
 
-ips = []
-my_ip = TELLO.get_host_ip()
-print('how many devices connected to your hotspot ? (please make sure only drones and your computer connect it)')
-sbn = int(input())
-
-for i in range(sbn):
-	print('input ip address of device #%d' % i)
-	ipt_ip = input()
-	if my_ip != ipt_ip:
-		ips.append(ipt_ip)
-
-print(ips)
-ctrl=TELLO.tello_controller(ips)
-ctrl.startup_sdk()
-sn_to_index = {}
-for i in range(ctrl.tello_num):
-	sn_to_index[ctrl.get_sn(i)]=i
-
-# ------------- setup done -------------
-# ----------- swarm  control -----------
-
-def index_map(idx):
-	return sn_to_index[sn_list[idx]]
-
-def send_all(cmd):
-	for i in range(ctrl.tello_num):
-		ctrl.send_command(cmd,index_map(i))
-
-def send_to(cmd,idx):
-	print(str(index_map(idx))+' gg')
-	ctrl.send_command(cmd,index_map(idx))
-
-def show_video():
-	# show video from drone
-	print('start recv video stream')
-
-	captures = []
-	for i in ips:
-		captures.append(cv.VideoCapture('udp://'+ips[0]+':11111'))
-
-	while stream_on:
-		for now_capture in captures:
-			ret,now_frame = now_capture.read()
-			try:
-				cv.imshow('capture', now_frame)
-			finally:
-				pass
-		if cv.waitKey(10)==ord('q'):
-			break
-	capture.release()
-	cv.destroyAllWindows()
-
-send_all('battery?')
-ctrl.sync_all()
+swarm
 
 print('enter 3 times to take off')
 input()
 input()
 input()
-
-stream_on = False
-thread_video = threading.Thread(target=show_video)
-
-send_all('streamon')
-stream_on = True
-#thread_video.start()
-ctrl.sync_all()
-
-ctrl.reset_tick()
-
-send_all('takeoff')
-ctrl.sync_all()
-
-# main
-
-send_to('forward 40', 0)
-send_to('back 40', 1)
-ctrl.sync_all()
-
-# main
-
-send_to('land', 0)
-ctrl.sync(0)
-send_to('land', 1)
-ctrl.sync(1)
-
-send_all('streamoff')
-stream_on = False
-ctrl.sync_all()
-
-print('OK')
-exit()

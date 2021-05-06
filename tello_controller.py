@@ -113,9 +113,10 @@ class tello_controller :
 
 	def send_command(self,command,index=0):
 		# send command to tello
-		print('send command '+command+' to '+str(self.tello_addr[index]))
-		self.sock_sender.sendto(command.encode('utf-8'),self.tello_addr[index])
-		self.send_count[index]+=1
+		if index<self.tello_num:
+			print('send command '+command+' to '+str(self.tello_addr[index]))
+			self.sock_sender.sendto(command.encode('utf-8'),self.tello_addr[index])
+			self.send_count[index]+=1
 	
 	def startup_sdk(self,index=-1):
 		# send 'command' to tello and startup tello sdk
@@ -149,6 +150,7 @@ class tello_controller :
 					all_recv = False
 			if all_recv:
 				break
+		time.sleep(end_time - self.get_time())
 
 	def sync(self,index=0,end_time=0):
 		stt_time = self.get_time()
@@ -178,6 +180,9 @@ class tello_controller :
 
 	def get_time(self):
 		return time.perf_counter() - self.start_time
+
+	def get_state(self,tag,idx=0):
+		return self.tello_states[idx][tag]
 
 
 def search_addr():

@@ -17,17 +17,26 @@ class swarm:
 	def add_schedule(self,time,cmd,idx):
 		self.schedule.append((time,idx,cmd))
 
-	def add_fun(self,time,target):
-		self.schedule.append((time,target,'funtion'))
+	def add_fun(self,time,target,args):
+		self.schedule.append((time,target,'funtion',args))
 
 	def run(self):
 		self.ctrl.reset_tick()
 		self.schedule.sort(key=lambda x:x[0])
-		for todo in self.schedule:
-			if todo[2]=='funtion':
-				target(self.ctrl)
+		print(self.schedule)
+		for i in range(len(self.schedule)):
+
+			print('run '+str(self.schedule[i]))
+
+			if self.schedule[i][2]=='funtion':
+				self.schedule[i][1](self.ctrl,self.schedule[i][3])
 				continue
-			for i in todo[1]:
-				self.ctrl.send_command(todo[2],i)
-			if not todo[2].startwith('rc'):
-				self.ctrl.sync_all(todo[0])
+
+			for j in self.schedule[i][1]:
+				if j>=self.ctrl.tello_num or j<0:
+					continue
+				self.ctrl.send_command(self.schedule[i][2],j)
+
+			if not self.schedule[i][2][0:1]=='rc':
+				if i<len(self.schedule)-1:
+					self.ctrl.sync_all(self.schedule[i+1][0])

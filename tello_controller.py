@@ -11,6 +11,8 @@ import thread_stop
 
 def get_host_ip():
 	# try ip
+	ip = ''
+
 	try:
 		s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 		s.connect(('8.8.8.8', 80))
@@ -60,9 +62,14 @@ class tello_controller :
 			# recv messages from tello and add it into a list
 			print('msg recv thread started')
 			while not self.sock_closed:
-
-				data,server = self.sock_sender.recvfrom(1518)
-				print(data,server)
+				print('not end')
+				try:
+					data,server = self.sock_sender.recvfrom(1518)
+					print(data,server)
+				except OSError:
+					print('end.')
+					return
+				print('not end')
 
 				for i in range(len(self.tello_ip)):
 					if server[0] == self.tello_ip[i]:
@@ -75,8 +82,11 @@ class tello_controller :
 			# recv tello state
 			print('state recv thread started')
 			while not self.sock_closed:
-
-				data,server = self.sock_state.recvfrom(1518)
+				try:
+					data,server = self.sock_state.recvfrom(1518)
+				except OSError:
+					print('end.')
+					return
 
 				for i in range(len(self.tello_ip)):
 					if server[0] == self.tello_ip[i]:
@@ -132,9 +142,6 @@ class tello_controller :
 		# close socket
 		self.sock_closed = True
 
-		self.sock_sender.sendto('end'.encode('utf-8'),(get_host_ip(),8889))
-		self.sock_sender.sendto('end'.encode('utf-8'),(get_host_ip(),8890))
-
 		self.sock_sender.close()
 		self.sock_state.close()
 
@@ -142,7 +149,7 @@ class tello_controller :
 		stt_time = self.get_time()
 		while True:
 			if (end_time!=0) and (self.get_time() > end_time):
-				print('%ds time out !' % max_time)
+				print('time out !')
 				break
 			all_recv = True
 			for i in range(len(self.tello_ip)):
@@ -150,7 +157,8 @@ class tello_controller :
 					all_recv = False
 			if all_recv:
 				break
-		time.sleep(end_time - self.get_time())
+		if end_time!=0:
+			time.sleep(max(end_time - self.get_time(),0))
 
 	def sync(self,index=0,end_time=0):
 		stt_time = self.get_time()
@@ -160,10 +168,12 @@ class tello_controller :
 				break
 			if self.send_count[index] == self.recv_count[index]:
 				break
+		if end_time!=0:
+			time.sleep(max(end_time - self.get_time(),0))
 
 	def get_sn(self,index=0):
 		self.send_command("sn?",index)
-		self.sync()
+		self.sync(index)
 		sn=str(self.get_msg(index)[-1])
 		while len(sn)!=17:
 			print(sn)
@@ -182,6 +192,9 @@ class tello_controller :
 		return time.perf_counter() - self.start_time
 
 	def get_state(self,tag,idx=0):
+		# return string , please convert it into type you need
+		if idx >= len(self.tello_states):
+			return '0'
 		return self.tello_states[idx][tag]
 
 

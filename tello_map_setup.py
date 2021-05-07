@@ -27,9 +27,14 @@ for i in range(sbn):
 
 print(ips)
 
+ctrl_sn = TELLO.tello_controller(ips)
+ctrl_sn.startup_sdk()
+
 sn_to_index = {}
-for i in range(ctrl.tello_num):
-	sn_to_index[ctrl.get_sn(i)]=i
+for i in range(ctrl_sn.tello_num):
+	sn_to_index[ctrl_sn.get_sn(i)]=i
 
 def get_index(idx):
 	return sn_to_index[sn_list[idx]]
+
+ctrl_sn.close()
